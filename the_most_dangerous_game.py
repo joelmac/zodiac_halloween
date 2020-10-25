@@ -1,60 +1,147 @@
 from copy import copy
-from random import shuffle
+import textwrap
+from random import shuffle,choices,random
 from bisect import bisect
-f = open('z340.txt',mode='r')
+from Classes.ScoreVisitor import ScoreVisitor
+from Classes.Node import Node
+
+#f = open('resources/z408.txt',mode='r')
+f = open('resources/z340.txt',mode='r')
 z_340 = f.read().replace("\n","")
 f.close()
-f = open('words_alpha.txt',mode='r')
+f = open('resources/words_alpha.txt',mode='r')
 words_complete = []
 for line in f:
     words_complete.append(line.replace("\n","").upper())
+f.close()
+f = open('resources/letter.txt',mode='r')
+for line in f:
+    words_complete+=line.replace("\n","").upper().split(" ")
+f.close()
 
+words_complete.sort()
 
-
-chars = {}
-for c in z_340:
-    chars[c] = chars.get(c,0)+1
+words_complete_rev = [word[::-1] for word in words_complete]
+words_complete_rev.sort()
 
 consonants = "bcdfghjklmnpqrstvwxz".upper()
 vowels = "aeiouy".upper()
 alphabet =list("abcdefghijklmnopqrstuvwxyz".upper())
 shuffle(alphabet)
 
-most_common_words = ['the'.upper(),'of'.upper(),'end'.upper(),'to'.upper(),'in'.upper(),'is'.upper(),'you'.upper(),'that'.upper(),'it'.upper(),'he'.upper(),'was'.upper(),'for'.upper(),'on'.upper(),'are'.upper(),'as'.upper(),'with'.upper(),'his'.upper(),'they'.upper(),'at'.upper(),'the'.upper(),'this'.upper(),'have'.upper(),'from'.upper(),'or'.upper(),'one'.upper(),'had'.upper(),'by'.upper(),'word'.upper(),'but'.upper(),'not'.upper(),'what'.upper(),'all'.upper(),'were'.upper(),'we'.upper(),'when'.upper(),'your'.upper(),'can'.upper(),'said'.upper(),'there'.upper(),'use'.upper(),'an'.upper(),'each'.upper(),'which'.upper(),'she'.upper(),'do'.upper(),'how'.upper(),'their'.upper(),'if'.upper(),'kill'.upper()]
-
-
-unstarts = ['BX','CJ','CV','CX','DX','FQ','FX','GQ','GX','HX','JC','JF','JG','JQ','JS','JV','JW','JX','JZ','KQ','KX','MX','PX','PZ','QB','QC','QD','QF','QG','QH','QJ','QK','QL','QM','QN','QP','QS','QT','QV','QW','QX','QY','QZ','SX','VB','VF','VH','VJ','VM','VP','VQ','VT','VW','VX','WX','XJ','XX','ZJ','ZQ','ZX']
+most_common_words = ['the'.upper(),'end'.upper(),'you'.upper(),'that'.upper(),'he'.upper(),'was'.upper(),'for'.upper(),'are'.upper(),'with'.upper(),'his'.upper(),'they'.upper(),'the'.upper(),'this'.upper(),'have'.upper(),'from'.upper(),'one'.upper(),'had'.upper(),'word'.upper(),'but'.upper(),'not'.upper(),'what'.upper(),'all'.upper(),'were'.upper(),'when'.upper(),'your'.upper(),'can'.upper(),'said'.upper(),'there'.upper(),'use'.upper(),'each'.upper(),'which'.upper(),'she'.upper(),'how'.upper(),'their'.upper(),'kill'.upper(),'like'.upper()]
 
 chars = []
 for c in z_340:
     if c not in chars:
         chars.append(c)
 
-def check_start(candidate):
+def is_words(candidate):
+    #Checks to see if the candidate string is a list of words
+    if is_word(candidate):
+        return True
+    else:
+        val = False
+        for k in range(1,len(candidate)):
+            if is_word(candidate[:k]):
+                val = val or is_words(candidate[k:])
+                if val:
+                    return val
+    return val
+
+
+def is_word(candidate):
+    #checks to see if the candidate string is a single word
     insertion_point = bisect(words_complete,candidate)
     for j in range(-1,2):
         if insertion_point + j >0 and insertion_point + j < len(words_complete):
-            if candidate in words_complete[insertion_point + j]:
-                #print("{} is in {}".format(candidate,words_complete[insertion_point +j]))
+            if candidate==words_complete[insertion_point + j]:
                 return True
     return False
 
+def check_start(candidate):
+    #Checks to see if the candidate string could be the start of a word
+    #does not consider adding spaces or clipping the string
+    insertion_point = bisect(words_complete,candidate)
+    for j in range(-1,2):
+        if insertion_point + j >0 and insertion_point + j < len(words_complete):
+            if candidate in words_complete[insertion_point + j][:len(candidate)]:
+                #print("{} is the beginning of {}".format(candidate,words_complete[insertion_point +j]))
+                return True
+    return False
+
+def check_end(candidate):
+    #Checks to see if the candidate string could be the end of a word
+    #does not consider adding spaces or clipping the string
+    r_candidate = candidate[::-1]
+    insertion_point = bisect(words_complete_rev,r_candidate)
+    for j in range(-1,2):
+        if insertion_point + j >0 and insertion_point + j < len(words_complete_rev):
+            if r_candidate in words_complete_rev[insertion_point + j][:len(r_candidate)]:
+                return True
+    return False
+
+def _single_in_a_row(state_text):
+    scores = {}
+    for c in alphabet:
+        scores[c] = 0
+    sequence_length = 1
+    for i in range(len(state_text)-1):
+        if state_text[i] == '*':
+            continue
+        if state_text[i] == state_text[i+1]:
+            sequence_length = sequence_length + 1
+        else:
+            if sequence_length > scores[state_text[i]]:
+                scores[state_text[i]] = sequence_length
+            sequence_length = 1
+    return scores
+
+
+#someone give me a cool halloween name for the methods
+def check_gibber_feasibility(gibber,starts_with_word=False,ends_with_word=False):
+    s = _single_in_a_row(gibber)
+    for letter in s:
+        if s[letter] > 3:
+            return False
+    if is_words(gibber):
+        return True
+    if starts_with_word == False and ends_with_word == False:
+        for word in words_complete:
+            if starts_with_word==False and ends_with_word == False:
+                if gibber in word:
+                    return True
+    if ends_with_word == False:
+        if check_start(gibber):
+            return True
+    if starts_with_word == False:
+        if check_end(gibber):
+            return True
+    #sometimes we can clip off the end of another word at the beginning of our gibberish to make it intelligible
+    #other cases:
+    #   -clip off the beginning of a word (on the right)
+    for left_division in range(1,len(gibber)):
+        start_fragment = gibber[:left_division]
+        valid = False
+        if starts_with_word == False:
+            if check_end(start_fragment):
+                valid = valid or check_gibber_feasibility(gibber[left_division:],starts_with_word=True,ends_with_word=ends_with_word)
+        if valid:
+            return valid
+    return False
 
 
 class State(object):
 
     def __init__(self,cipher_text):
-        
         self.cipher_text = cipher_text
         self.substitutions = {}
         self.divisions = [0]
         return
 
-    def update_state(self,c_1,r_1):
-        if c_1 not in chars:
-            print("{} is not in the cipher_text".format(c_1))
-        self.substitutions[c_1] = r_1
-        return 
+    def accept(self,visitor):
+        visitor.visit_node(self)
+        return
 
     def state_text(self):
         state_text = ['*']*len(self.cipher_text)
@@ -68,13 +155,57 @@ class State(object):
     def pretty_print(self):
         t = self.state_text()
         if len(self.divisions) > 0:
+            s = ''
             for i in range(1,len(self.divisions)):
-                print(''.join(t[self.divisions[i-1]:self.divisions[i]]))
-            print(''.join(t[self.divisions[-1]:]))
+                s+=" {}".format(''.join(t[self.divisions[i-1]:self.divisions[i]]))
+            s += " <you can't quite make out the words... zodiac's gibberish>"
+            #print(''.join(t[self.divisions[-1]:]))
+            print(s)
         else:
-            print(t)
+            print("<gibberish>")
         return
 
+    def extract_gibs(self,char=None):
+        ret = []
+        st = self.state_text()[:-30]
+        gib_start = 0
+        gib_end = gib_start+1
+        first_gib_included = False
+        if self.cipher_text[0] in self.substitutions:
+            first_gib_included =True
+        while gib_end < len(st):
+            if self.cipher_text[gib_start] not in self.substitutions:
+                gib_start = gib_start + 1
+                gib_end = gib_start + 1
+            else:
+                while self.cipher_text[gib_end] in self.substitutions:
+                    gib_end = gib_end + 1
+                if char is None:
+                    ret.append(''.join(st[gib_start:gib_end]))
+                else:
+                    if char in self.cipher_text[gib_start:gib_end]:
+                        ret.append(''.join(st[gib_start:gib_end]))
+                gib_start = gib_end
+                gib_end = gib_start+1
+        #cands = ''.join(self.state_text()[:-30]).split('*')
+        #for cand in cands:
+        #    if len(cand) > 1:
+        #        ret.append(cand)
+        return ret,first_gib_included
+
+    def feasible_gibs(self,char=None):
+        gibs,first_gib_included = self.extract_gibs(char=char)
+        for i,gib in enumerate(gibs):
+            if i==0 and first_gib_included:
+                if check_gibber_feasibility(gib,starts_with_word=True)==False:
+                    return False
+            if check_gibber_feasibility(gib)==False:
+                #print("Ruled out due to gib {}".format(gib))
+                return False
+        return True
+
+
+    #method is FAR too complicated must be simplified
     def feasible_breaks(self,starting_break=0):
         #print("inside feasible breaks on starting_break {}".format(starting_break))
         #print("Calling forced breaks")
@@ -123,56 +254,67 @@ class State(object):
                 break_descendants += F
         return break_descendants
 
-
-    def generate_descendants(self):
+    def generate_descendants(self,scorer=None):
         descendants = []
+        l_vowels = list(vowels)
+        shuffle(l_vowels)
+        l_consonants = list(consonants)
+        shuffle(l_consonants)
+        letters = l_consonants + l_vowels
         for char in chars:
             if char not in self.substitutions:
-                #if len(self.substitutions.keys()) == 0:
-                #    for r in "I":
-                #        S = State(self.cipher_text)
-                #        S.substitutions = copy(self.substitutions)
-                #        S.divisions = copy(self.divisions)
-                #        S.divisions += [1]
-                #        S.update_state(char,r)
-                #        starting_break = 0
-                #        replace_index = self.cipher_text.index(char)
-                #        for index,value in enumerate(self.divisions):
-                #            if value < replace_index:
-                #                starting_break=index
-                #        feasible_descendants = S.feasible_breaks(starting_break=starting_break)
-                #        descendants += feasible_descendants
-                #    break
-                shuffle(alphabet)
-                for r in alphabet:
+                branch_point_descendants = []
+                for r in letters:
                     S = State(self.cipher_text)
                     S.substitutions = copy(self.substitutions)
                     S.divisions = copy(self.divisions)
                     S.update_state(char,r)
                     starting_break = 0
                     replace_index = self.cipher_text.index(char)
-                    for index,value in enumerate(self.divisions):
-                        if value < replace_index:
-                            starting_break=index
-                    feasible_descendants = S.feasible_breaks(starting_break=starting_break)
-                    descendants += feasible_descendants
-                break
+                    if S.feasible_gibs(char=char):
+                        branch_point_descendants.append(S)
+                        if len(branch_point_descendants) >= len(descendants) and len(descendants)>0:
+                            break
+                if scorer is None:
+                    for node in branch_point_descendants:
+                        node.score = 1./len(branch_point_descendants)
+                    else:
+                        scorer.visit_nodes(branch_point_descendants)
+                if len(branch_point_descendants) <= 4:
+                    return branch_point_descendants
+                elif (len(branch_point_descendants) < len(descendants)) or len(descendants) == 0:
+                    descendants = copy(branch_point_descendants)
+        shuffle(descendants)
         return descendants
+
+    def update_state(self,c_1,r_1):
+        if c_1 not in chars:
+            print("{} is not in the cipher_text".format(c_1))
+        self.substitutions[c_1] = r_1
+        return 
 
 
 
 class TreeOfKnowledge(object):
 
-    def __init__(self,cipher_text,num_states=2000):
+    def __init__(self,cipher_text,num_states=2000,score_visitor=ScoreVisitor()):
         self.states = [State(cipher_text)]
         self.scores = {}
         self.num_states = num_states
+        self.scorer = score_visitor
         return
+
+    def depths(self):
+        depths = {}
+        for state in self.states:
+            v = len(state.substitutions.keys())
+            depths[v] = depths.get(v,0) + 1
+        return depths
 
     def rescore(self):
         for state in self.states:
             if state not in self.scores:
-                self.scores[state] = self.gibber_jabber(state)
+                self.scores[state] = 0.
         return
 
     def prune(self):
@@ -185,104 +327,34 @@ class TreeOfKnowledge(object):
                 del self.states[self.num_states]
         return
 
+    def remove_node(self,state):
+        del self.scores[state]
+        self.states.remove(state)
+        return
+
+
+    #to do implement branching visitor
     def next(self):
-        #choose the highest score state
-        highest_score = 0.0
-        highest_state = 0.0
-        for state in self.states:
-            if self.scores[state] >= highest_score:
-                highest_score = self.scores[state]
-                highest_state = state
-        #print("Highest state was {}".format(highest_state.state_text()))
-        #input()
-        self.states = self.states + highest_state.generate_descendants()
-        self.scores.pop(highest_state)
-        self.states.remove(highest_state)
+        r = random()
+        if r < .30:
+            branch_state = self.states[0]
+        elif r < .70:
+            branch_state = choices(self.states[:self.num_states//10],k=1)[0]
+        else:
+            d = self.depths()
+            min_depth = min(list(d.keys()))
+            for state in self.states:
+                if len(state.substitutions) == min_depth:
+                    branch_state = state
+                    break
+        self.states = self.states + branch_state.generate_descendants(scorer=self.scorer)
+        self.remove_node(branch_state)
         self.rescore()
         self.states.sort(key= lambda state: self.scores[state],reverse=True)
         self.prune()
         return
 
-    def gibber_jabber(self,state):
-        #runs several tests to decide if the text is clearly gibberish.
-        #scores text with fewer wildcards (but not gibberish) higher
-        #scores text with words (but not gibberish) higher
-        #scores text that is clearly gibberish as 0.
-        state_text = state.state_text()
-        subs = state.substitutions
-        targets = set(subs.values())
-        symbols = set(subs.keys())
-        pre_score = len("".join(state_text).replace("*",""))
 
-        if self._check_unstart(state_text) == 0:
-            return 0.0
-
-        if len(targets) + 63 - len(symbols) < 21:
-            return 0.0
-
-        if self._total_vowels(state_text) + (340 - pre_score) < .3*340:
-            return 0.0
-
-        if self._total_consonants(state_text) + (340 - pre_score) < .5*340:
-            return 0.0
-
-        cons = self._consonants_subsequence_length(state_text)
-        if cons > 5:
-            return 0.0
-
-        if not self._feasible_kill(state_text,spaces=3):
-            return 0.0
-
-        singles = self._single_in_a_row(state_text)
-        if singles['Z'] >=3:
-            return 0.0
-        if singles['Y'] >=3:
-            return 0.0
-        if singles['B'] >=3:
-            return 0.0
-        if singles['V'] >=3:
-            return 0.0
-        if singles['I'] >=3:
-            return 0.0
-        if singles['P'] >=3:
-            return 0.0
-        if singles['A'] >=3:
-            return 0.0
-        if singles['U'] >=3:
-            return 0.0
-        if singles['R'] >=3:
-            return 0.0
-        for c in singles:
-            if singles[c] >= 3:
-                return 0.0
-
-        frequency = self._frequency(state_text)
-        common_letters = ['E','T','A','O','I','N','S','H','R','L']
-        common_sum = 0.
-        uncommon_sum = 0.
-        for common_letter in common_letters:
-            if frequency[common_letter] >= .20*len(state_text):
-                return 0.0
-            common_sum += frequency[common_letter]
-        for c in frequency:
-            if c not in common_letters and frequency[c] >= .15*len(state_text):
-                return 0.0
-            if c not in common_letters:
-                uncommon_sum += frequency[c]
-        if common_sum < uncommon_sum and pre_score > 80:
-            return 0.0
-
-        word_frequency = self._check_common_words(state_text)
-        total_frequency = 0.
-        frequency_score = 0.
-        for k,v in word_frequency.items():
-            frequency_score = frequency_score + (v*len(k))
-            total_frequency = total_frequency + 1
-        if pre_score/340. > .2:
-            if total_frequency < 1:
-                return 0.0
-
-        return (pre_score / 340.) + (frequency_score/60.) + 100*word_frequency['KILL']
 
     def _feasible_kill(self,state_text,spaces=1):
         txt = ''.join(state_text)
@@ -325,18 +397,6 @@ class TreeOfKnowledge(object):
             if word in ''.join(state_text):
                 frequency[word] = frequency[word] +1
         return frequency
-
-    def _check_unstart(self,state_text):
-        start = ''.join(state_text[0:2])
-        if start in unstarts:
-            #print("{} was in {}".format(start,unstarts))
-            #input()
-            return 0.
-        start = state_text[0:4]
-        for vowel in vowels:
-            if vowel in start:
-                return 1.
-        return 0.
 
 
     def _consonants_subsequence_length(self,state_text):
@@ -423,13 +483,24 @@ class TreeOfKnowledge(object):
 
 
 S = State(z_340)
-T = TreeOfKnowledge(z_340,num_states=100000)
+T = TreeOfKnowledge(z_340,num_states=50000)
 T.rescore()
 
-for i in range(100000):
+for i in range(20000):
     T.next()
-    print("Raw State:")
-    print(T.states[0].state_text())
-    print("State with Divisions:")
-    T.states[0].pretty_print()
-    print(T.states[0].divisions)
+    d = T.depths()
+    f = open("output/screen_candy.txt",mode='w')
+    f.write("\n")
+    f.write("*-"*10)
+    f.write("\n")
+    f.write(textwrap.fill(''.join(T.states[0].state_text()),width=17))
+    f.write("\n")
+    f.write("*-"*10)
+    f.write("\n"*1)
+    #f.write("The Zodiac Tells you...")
+    #T.states[0].pretty_f.write()
+    f.write("Evaluating {} states:\n".format(len(T.states)))
+    for i in range(50):
+        if i in d:
+            f.write("{} nodes at depth {}\n".format(d[i],i))
+    f.close()

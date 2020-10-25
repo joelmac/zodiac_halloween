@@ -1,0 +1,16 @@
+Date 10/24/20
+Goal:
+    (X) Build letter sequence gibber filtration for tree search pruning
+    ( ) Build a second branching method
+
+Coffee Count:
+    3
+
+On the Menu:
+    Steak and potato
+
+Music:
+    Retro Synthwave
+
+Pattern of the day:
+    box pattern and 441

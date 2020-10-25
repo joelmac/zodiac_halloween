@@ -1,0 +1,23 @@
+Date 10/25/20
+Goal:
+    (X) Build letter sequence gibber filtration for tree search pruning
+    (X) Build branching methods
+    ( ) Build alternative scoring method (visitor design)
+        (X) Implement the current scheme with a visitor
+        (X) Implement an alternative scheme
+        ( ) Implement neuro-dynamic
+    ( ) Build Neural Gibberish Detector
+    ( ) Implement low memory node
+    ( ) Node hashes
+
+Coffee Count:
+    5
+
+On the Menu:
+    Chipotle
+
+Music:
+    Positions - Ariana Grande
+
+Juggling pattern of the day:
+    cherry picker
