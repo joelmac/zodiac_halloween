@@ -1,3 +1,4 @@
+
 def gibber_jabber(self,state):
     #runs several tests to decide if the text is clearly gibberish.
     #scores text with fewer wildcards (but not gibberish) higher
@@ -30,16 +31,14 @@ class ScoreVisitor(object):
         return
 
     def visit_node(self,node):
-        node.score = 1
+        node._score = 1
         return 
 
     def visit_nodes(self,nodes):
         score = len(nodes)
         for node in nodes:
-            node.score=1./score
+            node._score=10./score + len(node.substitutions)/1.
         return
-
-
 
 
 class HeuristicScoreVisitor(ScoreVisitor):
